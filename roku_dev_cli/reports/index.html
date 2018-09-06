@@ -1,0 +1,161 @@
+<script src="./nodes.js"></script>
+<script src="./system_memory.js"></script>
+<script src="./texture_memory.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-debug.js"></script>
+
+<h1>Memory Report</h1>
+
+<div id="systemMemoryOverTime" style="width: 100%; height: 600px;"></div>
+<div id="textureMemoryOverTime" style="width: 100%; height: 600px;"></div>
+
+<div id="nodesOverTime" style="width: 100%; height: 600px;"></div>
+
+<script>
+"use strict";
+
+var nodeBuckets = getNodeBuckets(); // dynamically created
+var systemMemoryBuckets = getSystemMemoryBuckets(); // dynamically created
+var textureMemoryBuckets = getTextureMemoryBuckets(); // dynamically created
+
+// graph system memory over time
+//
+function createSystemMemoryGraph() {
+    var systemMemoryTimes = [];
+    var systemMemoryStatus = [];
+    var maximum = 0;
+    for (var i = 0; i < systemMemoryBuckets.length; i++) {
+        var bucket = systemMemoryBuckets[i];
+
+        var d = new Date(0);
+        d.setUTCSeconds(bucket.startTime);
+        if ("system_memory" in bucket) {
+            systemMemoryTimes.push(d);
+            systemMemoryStatus.push(0.001 * parseInt(bucket.system_memory.used, 10));
+            maximum = 0.001 * parseInt(bucket.system_memory.total, 10);
+        }
+    }
+
+    var usedData = [
+        {
+            type: 'scatter',
+            x: systemMemoryTimes,
+            y: systemMemoryStatus
+        }
+    ];
+
+    var layout = {
+        title: 'System Memory over Time (max: ' + maximum + ' megabytes)',
+        yaxis: {
+            title: 'system memory (in megabytes)',
+            range: [0, maximum]
+        }
+    };
+
+    Plotly.newPlot('systemMemoryOverTime', usedData, layout);
+}
+createSystemMemoryGraph();
+
+// graph texture memory over time
+//
+function createTextureMemoryGraph() {
+    var textureMemoryTimes = [];
+    var textureMemoryStatus = [];
+    var maximum = 0;
+    for (var i = 0; i < textureMemoryBuckets.length; i++) {
+        var bucket = textureMemoryBuckets[i];
+
+        var d = new Date(0);
+        d.setUTCSeconds(bucket.startTime);
+        if ("texture_memory" in bucket) {
+            textureMemoryTimes.push(d);
+            textureMemoryStatus.push(0.000001 * parseInt(bucket.texture_memory.used, 10));
+            maximum = 0.000001 * parseInt(bucket.texture_memory.maximum, 10);
+        }
+    }
+
+    var usedData = [
+        {
+            type: 'scatter',
+            x: textureMemoryTimes,
+            y: textureMemoryStatus
+        }
+    ];
+
+    var layout = {
+        title: 'Texture Memory over Time (max: ' + maximum + ' megabytes)',
+        yaxis: {
+            title: 'texture memory (in megabytes)',
+            range: [0, maximum]
+        }
+    };
+
+    Plotly.newPlot('textureMemoryOverTime', usedData, layout);
+}
+createTextureMemoryGraph();
+
+// graph nodes over time
+//
+function createTagGraph() {
+    // get set of all tag names
+    var nodeTypes = new Set();
+    var tagTimes = [];
+    for (var i = 0; i < nodeBuckets.length; i++) {
+        var bucket = nodeBuckets[i];
+        var bucketTagCounts = bucket["tagCounts"];
+        for (var tagName in bucketTagCounts) {
+            // to reduce noise, only include nodes that have multiple instances
+            if (bucketTagCounts[tagName] > 1) {
+                nodeTypes.add(tagName);
+            }
+        }
+
+        var d = new Date(0);
+        d.setUTCSeconds(bucket.startTime);
+        tagTimes.push(d);
+    }
+
+    // for every node type, generate its count across the timeline
+    var data = [];
+    var maximum = 5; // used for graph y-axis
+    for (let tagName of nodeTypes.values()) { //i = 0; i < nodeTypes.values().length; i++) {
+        //var tagName = nodeTypes.values()[i];
+        var tagCounts = [];
+        for (var j = 0; j < nodeBuckets.length; j++) {
+            var bucket = nodeBuckets[j];
+            var bucketTagCounts = bucket["tagCounts"];
+            // var totalInBucket = 0;
+            // for (var tagName in bucketTagCounts) {
+            //     totalInBucket += bucketTagCounts[tagName];
+            // }
+            //tagCounts.push(totalInBucket);
+            var tagCount = 0;
+            if (tagName in bucketTagCounts) {
+                tagCount = bucketTagCounts[tagName];
+            }
+            tagCounts.push(tagCount);
+
+            maximum = Math.max(maximum, tagCount);
+        }
+
+        data.push({
+            name: tagName,
+            x: tagTimes,
+            y: tagCounts,
+            type: 'scatter'
+        })
+    }
+
+    var layout = {
+        title: 'Nodes over Time (> 1 instance)',
+        yaxis: {
+            title: '# of Nodes',
+            range: [0, maximum]
+        }
+    };
+
+    Plotly.newPlot('nodesOverTime', data, layout);
+}
+createTagGraph();
+
+</script>

@@ -497,6 +497,8 @@ def validIp(ipUnicode, verbose=True):
         log_info(e, verbose=verbose)
     return ip
 
+# Return an IPAddress object if `ipUnicode` responds successfully to
+# ping; otherwise return None
 def reachableIp(ipUnicode, verbose=True):
     ip = validIp(ipUnicode, verbose=verbose)
     if ip and os.system("ping -q -n -c 1 -W 500 {} &> /dev/null".format(ip)):
@@ -504,27 +506,33 @@ def reachableIp(ipUnicode, verbose=True):
         ip = None
     return ip
 
+# Return an IPAddress object if `ipUnicode` responds successfully to
+# a Roku device-info query; otherwise return None
 def rokuIp(ipUnicode, verbose=True):
     ip = reachableIp(ipUnicode, verbose=verbose)
     if ip and os.system('curl -s --connect-timeout .5 -o /dev/null "http://{}:8060/query/device-info"'.format(ip)):
-        log_info('{} is not a dev-mode Roku device'.format(ipUnicode), verbose=verbose)
+        log_info('{} is not a Roku device'.format(ipUnicode), verbose=verbose)
         ip = None
     return ip
 
+# Return the first `rokuIp` found for the addresses in `ipUnicodes`;
+# otherwise return None
 def findRokuIp(ipUnicodes, verbose=True):
-    log_info('Finding dev-mode Roku devices in {}'.format(ipUnicodes))
+    log_info('Finding Roku devices in {}'.format(ipUnicodes))
     ip = next((ipUnicode for ipUnicode in ipUnicodes if rokuIp(ipUnicode, verbose=verbose)), None)
     if not ip:
-        log_fail('No reachable dev-mode Roku device found in {}'.format(ipUnicodes), verbose=verbose)
+        log_fail('No reachable Roku device found in {}'.format(ipUnicodes), verbose=verbose)
         exit(1)
-    log_ok('{} is a dev-mode Roku device'.format(ip), verbose=verbose)
+    log_ok('{} is a Roku device'.format(ip), verbose=verbose)
     return ip
 
+# Return a list of IPAddress objects for the addresses in `ipUnicodes`,
+# may be empty
 def selectRokuIps(ipUnicodes, verbose=True):
-    log_info('Finding dev-mode Roku devices in {}'.format(ipUnicodes), verbose=verbose)
+    log_info('Finding Roku devices in {}'.format(ipUnicodes), verbose=verbose)
     rokuIpQuiet = lambda ipUnicode: rokuIp(ipUnicode, verbose=False)
     rokuIps = filter(rokuIpQuiet, ipUnicodes)
-    log_ok('Found the following dev-mode Roku devices {}'.format(rokuIps), verbose=verbose)
+    log_ok('Found the following Roku devices {}'.format(rokuIps), verbose=verbose)
 
 def main():
     parser = argparse.ArgumentParser(description='Uploads builds to the device and telnets into the machine for logging')

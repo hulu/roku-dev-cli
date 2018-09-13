@@ -131,3 +131,29 @@ roku --proxy <IP_ADDRESS>
 At this point the application should be running through your proxy.
 
 TODO: document use of mitmdump scripts
+
+# Publishing to PyPi
+
+1.  If necessary, create a personal account at pypi.org and ask to be added as a
+    maintainer of https://pypi.org/project/roku-dev-cli/.
+
+2.  If necessary, edit `~/.pypirc` to include your pypi.org credentials. For
+    example:
+
+    ```ini
+    [distutils]
+    index-servers =
+      pypi
+
+    [pypi]
+    username: <your-pypi-username>
+    ```
+
+3.  Merge your pull request, including updating `version.py`.
+
+4.  Publish to the default public pypi repo, you will be prompted to enter your
+    pypi.org password:
+
+    ```shell
+    python setup.py sdist upload
+    ```

@@ -490,6 +490,12 @@ def str2list(str, delim=';'):
     return list(strs) # resolve iterable to list
 
 def validIp(ipUnicode, verbose=True):
+    """Create valid IPAddress object or None
+    :param str ipUnicode: An IP address as a Unicode string.
+    :param bool verbose: Set to false to suppress log output.
+    :return: An IPAddress object if `ipUnicode` is well-formed; otherwise None.
+    :rtype: IPAddress or None
+    """
     ip = None
     try:
         ip = ipaddress.ip_address(ipUnicode)
@@ -498,6 +504,13 @@ def validIp(ipUnicode, verbose=True):
     return ip
 
 def reachableIp(ipUnicode, verbose=True):
+    """Create reachable IPAddress object or None
+    :param str ipUnicode: An IP address as a Unicode string.
+    :param bool verbose: Set to false to suppress log output.
+    :return: An IPAddress object if `ipUnicode` responds successfully to
+        ping; otherwise None.
+    :rtype: IPAddress or None
+    """
     ip = validIp(ipUnicode, verbose=verbose)
     if ip and os.system("ping -q -n -c 1 -W 500 {} &> /dev/null".format(ip)):
         log_info('{} is not reachable'.format(ipUnicode), verbose=verbose)
@@ -505,26 +518,48 @@ def reachableIp(ipUnicode, verbose=True):
     return ip
 
 def rokuIp(ipUnicode, verbose=True):
+    """Create reachable, Roku IPAddress object or None
+    :param str ipUnicode: An IP address as a Unicode string.
+    :param bool verbose: Set to false to suppress log output.
+    :return: An IPAddress object if `ipUnicode` responds successfully to
+        a Roku device-info query; otherwise None.
+    :rtype: IPAddress or None
+    """
     ip = reachableIp(ipUnicode, verbose=verbose)
     if ip and os.system('curl -s --connect-timeout .5 -o /dev/null "http://{}:8060/query/device-info"'.format(ip)):
-        log_info('{} is not a dev-mode Roku device'.format(ipUnicode), verbose=verbose)
+        log_info('{} is not a Roku device'.format(ipUnicode), verbose=verbose)
         ip = None
     return ip
 
 def findRokuIp(ipUnicodes, verbose=True):
-    log_info('Finding dev-mode Roku devices in {}'.format(ipUnicodes))
+    """Find first reachable, Roku IP address as an IPAddress object or None
+    :param list[str] ipUnicodes: A list of IP addresses as Unicode strings.
+    :param bool verbose: Set to false to suppress log output.
+    :return: An IPAddress object for the first address in `ipUnicodes` that
+        responds successfully to a Roku device-info query; otherwise None.
+    :rtype: IPAddress or None
+    """
+    log_info('Finding Roku devices in {}'.format(ipUnicodes))
     ip = next((ipUnicode for ipUnicode in ipUnicodes if rokuIp(ipUnicode, verbose=verbose)), None)
     if not ip:
-        log_fail('No reachable dev-mode Roku device found in {}'.format(ipUnicodes), verbose=verbose)
+        log_fail('No reachable Roku device found in {}'.format(ipUnicodes), verbose=verbose)
         exit(1)
-    log_ok('{} is a dev-mode Roku device'.format(ip), verbose=verbose)
+    log_ok('{} is a Roku device'.format(ip), verbose=verbose)
     return ip
 
 def selectRokuIps(ipUnicodes, verbose=True):
-    log_info('Finding dev-mode Roku devices in {}'.format(ipUnicodes), verbose=verbose)
+    """Create list of reachable, Roku IPAddress objects.
+    :param list[str] ipUnicodes: A list of IP addresses as Unicode strings.
+    :param bool verbose: Set to false to suppress log output.
+    :return: A list of IPAddress objects for addresses in `ipUnicodes` that
+        respond successfully to a Roku device-info query. May be empty.
+    :rtype: list[IPAddress]
+    """
+    log_info('Finding Roku devices in {}'.format(ipUnicodes), verbose=verbose)
     rokuIpQuiet = lambda ipUnicode: rokuIp(ipUnicode, verbose=False)
-    rokuIps = filter(rokuIpQuiet, ipUnicodes)
-    log_ok('Found the following dev-mode Roku devices {}'.format(rokuIps), verbose=verbose)
+    ips = filter(rokuIpQuiet, ipUnicodes)
+    log_ok('Found the following Roku devices {}'.format(ips), verbose=verbose)
+    return ips
 
 def main():
     parser = argparse.ArgumentParser(description='Uploads builds to the device and telnets into the machine for logging')

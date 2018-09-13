@@ -557,8 +557,9 @@ def selectRokuIps(ipUnicodes, verbose=True):
     """
     log_info('Finding Roku devices in {}'.format(ipUnicodes), verbose=verbose)
     rokuIpQuiet = lambda ipUnicode: rokuIp(ipUnicode, verbose=False)
-    rokuIps = filter(rokuIpQuiet, ipUnicodes)
-    log_ok('Found the following Roku devices {}'.format(rokuIps), verbose=verbose)
+    ips = filter(rokuIpQuiet, ipUnicodes)
+    log_ok('Found the following Roku devices {}'.format(ips), verbose=verbose)
+    return ips
 
 def main():
     parser = argparse.ArgumentParser(description='Uploads builds to the device and telnets into the machine for logging')

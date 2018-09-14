@@ -110,8 +110,7 @@ class ConsoleListener(threading.Thread):
             while True:
                 text = self.session.read_very_eager()
                 if text:
-                    if sys.version_info.major == 3:
-                        text = text.decode('utf-8')
+                    text = text.decode('utf-8')
                     #removes logs from previous sessions
                     compileIndex = text.rfind("------ Compiling")
                     if compileIndex != -1:

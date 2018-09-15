@@ -466,12 +466,18 @@ def getMitmProxyVersion():
     print(msg)
     exit(1)
 
-def startProxy(proxyScripts):
+def startProxy(proxyScripts, proxyExclude):
+    """Create valid IPAddress object or None
+    :param list proxyScripts: list of scripts by path that mitm will execute on proxy requests
+    :param list proxyExclude: list of domains the proxy script will exclude from inspection
+    """
     global proxyProcess
 
     # NICE-TO-HAVE TODO: somehow verify cross-platform that HTTP/HTTPS is redirecting to 8080
 
-    hostsRegex = "(s-video.innovid.com|roku.com|brightline.tv|license.\w+.com):\d+$"
+    excludedHosts = ["s-video.innovid.com", "roku.com", "brightline.tv", "license.\w+.com"] + proxyExclude
+
+    hostsRegex = "(%s):\d+$" % "|".join(excludedHosts)
     if getMitmProxyVersion()[0] == 2:
         args = ["mitmdump", "-T", "--host", "--ignore", hostsRegex]
     else: # assume 3+
@@ -572,6 +578,7 @@ def main():
     parser.add_argument('-a', '--automation', action='store_true', help="creates an automation build")
     parser.add_argument('-p', '--proxy', action='store_true', help="builds the app to proxy through this host")
     parser.add_argument('-s', '--proxy_scripts', nargs='+', help='Provide paths to proxy add-on scripts', required=False)
+    parser.add_argument('--proxy_exclude', nargs='+', help='Provide regex-formatted domains that will be exclude by proxy filter', default=[], required=False)
     parser.add_argument('--check_ip', action='store_true', help="Checks for at least one, reachable, Roku IP address")
     parser.add_argument('--select_roku_ips', action='store_true', help="Filters list of IPs and returns all valid, reachable, roku IPs in list.")
     parser.add_argument(
@@ -602,14 +609,19 @@ def main():
 
     useProxy = args.proxy
     proxyScripts = args.proxy_scripts
+    proxyExclude = args.proxy_exclude
 
     # start mitmproxy
     if useProxy:
-        startProxy(proxyScripts)
+        startProxy(proxyScripts, proxyExclude)
 
     # if we aren't using proxy but user specified scripts to load
     elif proxyScripts is not None:
         print("'--proxy_scripts' argument can only be used if '--proxy' argument is also specified")
+        exit(1)
+    
+    elif proxyIgnore is not None:
+        print("'--proxy_ignore' argument can only be used if '--proxy' argument is also specified")
         exit(1)
 
     if args.zip_file: # zip file provided

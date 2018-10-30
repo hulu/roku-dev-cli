@@ -119,7 +119,8 @@ class ConsoleListener(threading.Thread):
                         if self.timestamp:
                             timestamp = datetime.datetime.now().strftime('%h %d, %Y %I:%M:%S%p')
                             line = bcolors.OKBLUE + "[" + timestamp + "] " + bcolors.ENDC + line
-                        print(line)
+                        if line:
+                            print(line)
                     #when exiting to the debugger, we are exiting the script too.
                     if text.rfind("Brightscript Debugger>") != -1:
                         print(bcolors.FAIL + "Press any key to exit" + bcolors.ENDC)

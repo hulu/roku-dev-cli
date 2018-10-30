@@ -108,7 +108,7 @@ class ConsoleListener(threading.Thread):
         try:
             self.session = telnetlib.Telnet(self.ip, self.port)
             while True:
-                text = self.session.read_very_eager()
+                text = self.session.read_until(b"\n", 1)
                 if text:
                     text = text.decode('utf-8')
                     #removes logs from previous sessions
@@ -233,7 +233,7 @@ class PollingListener(threading.Thread):
         try:
             self.session = telnetlib.Telnet(self.ip, self.port)
             while True:
-                text = self.session.read_very_eager()
+                text = self.session.read_until(b"\n")
                 if text:
                     poller = self.pollers[self.pollerIndex]
                     poller.process(text)

@@ -108,7 +108,7 @@ class ConsoleListener(threading.Thread):
         try:
             self.session = telnetlib.Telnet(self.ip, self.port)
             while True:
-                text = self.session.read_very_eager()
+                text = self.session.read_until(b"\n", 1)
                 if text:
                     text = text.decode('utf-8')
                     #removes logs from previous sessions
@@ -119,7 +119,8 @@ class ConsoleListener(threading.Thread):
                         if self.timestamp:
                             timestamp = datetime.datetime.now().strftime('%h %d, %Y %I:%M:%S%p')
                             line = bcolors.OKBLUE + "[" + timestamp + "] " + bcolors.ENDC + line
-                        print(line)
+                        if line:
+                            print(line)
                     #when exiting to the debugger, we are exiting the script too.
                     if text.rfind("Brightscript Debugger>") != -1:
                         print(bcolors.FAIL + "Press any key to exit" + bcolors.ENDC)
@@ -233,7 +234,7 @@ class PollingListener(threading.Thread):
         try:
             self.session = telnetlib.Telnet(self.ip, self.port)
             while True:
-                text = self.session.read_very_eager()
+                text = self.session.read_until(b"\n")
                 if text:
                     poller = self.pollers[self.pollerIndex]
                     poller.process(text)

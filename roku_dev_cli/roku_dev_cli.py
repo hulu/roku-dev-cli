@@ -105,6 +105,15 @@ class ConsoleListener(threading.Thread):
         self.timestamp = timestamp # show a timestamp before log output
 
     def run(self):
+        debuggerHighlights = set([
+            "BrightScript Micro Debugger.",
+            "Enter any BrightScript statement, debug commands, or HELP.",
+            "Current Function:",
+            "Backtrace:",
+            "Local Variables:",
+            "Brightscript Debugger>"
+            ""
+        ])
         try:
             self.session = telnetlib.Telnet(self.ip, self.port)
             while True:
@@ -116,16 +125,17 @@ class ConsoleListener(threading.Thread):
                     if compileIndex != -1:
                         text = text[compileIndex:]
                     for line in text.split('\n'):
-                        if self.timestamp:
-                            timestamp = datetime.datetime.now().strftime('%h %d, %Y %I:%M:%S%p')
-                            line = bcolors.OKBLUE + "[" + timestamp + "] " + bcolors.ENDC + line
                         if line:
-                            print(line)
-                    #when exiting to the debugger, we are exiting the script too.
-                    if text.rfind("Brightscript Debugger>") != -1:
-                        print(bcolors.FAIL + "Press any key to exit" + bcolors.ENDC)
-                        exit(1)
-
+                            if self.timestamp:
+                                timestamp = datetime.datetime.now().strftime('%h %d, %Y %I:%M:%S%p')
+                                line = bcolors.OKBLUE + "[" + timestamp + "] " + bcolors.ENDC + line
+                            
+                            # add red to highlight debugger output
+                            if line.strip() in debuggerHighlights:
+                                print(bcolors.FAIL + line + bcolors.ENDC)
+                            else:
+                                print(line)
+                    
         except EOFError as e:
             print(e)
             print(bcolors.FAIL + "telnet timed out on port %i" % self.port + bcolors.ENDC)

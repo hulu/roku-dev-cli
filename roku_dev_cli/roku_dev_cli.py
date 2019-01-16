@@ -642,8 +642,8 @@ def main():
         print("'--proxy_exclude' argument can only be used if '--proxy' argument is also specified")
         exit(1)
 
-    elif useWebUi is not None:
-        print("'--web_ui' argument can only be used if '--proxy' argument is also specified")
+    elif useWebUi:
+        print("'--web' argument can only be used if '--proxy' argument is also specified")
         exit(1)
 
 

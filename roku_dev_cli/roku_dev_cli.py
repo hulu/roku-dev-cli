@@ -477,10 +477,11 @@ def getMitmProxyVersion():
     print(msg)
     exit(1)
 
-def startProxy(proxyScripts, proxyExclude):
+def startProxy(proxyScripts, proxyExclude, useWebUi):
     """Create valid IPAddress object or None
     :param list proxyScripts: list of scripts by path that mitm will execute on proxy requests
     :param list proxyExclude: list of domains the proxy script will exclude from inspection
+    :param bool useWebUi: `True` if `mitmweb` should be used instead of `mitmdump`, otherwise `False`
     """
     global proxyProcess
 
@@ -492,15 +493,16 @@ def startProxy(proxyScripts, proxyExclude):
     excludedHosts = ["s-video.innovid.com", "roku.com", "brightline.tv", "license.\w+.com"] + proxyExclude
 
     hostsRegex = "(%s):\d+$" % "|".join(excludedHosts)
+    command = ["mitmweb", "--no-web-open-browser"] if useWebUi else ["mitmdump"]
     if getMitmProxyVersion()[0] == 2:
-        args = ["mitmdump", "-T", "--host", "--ignore", hostsRegex]
+        command.extend(["-T", "--host", "--ignore", hostsRegex])
     else: # assume 3+
-        args = ["mitmdump", "--mode", "transparent", "--showhost", "--ignore-hosts", hostsRegex]
+        command.extend(["--mode", "transparent", "--showhost", "--ignore-hosts", hostsRegex])
 
     if proxyScripts is not None:
-        [args.extend(["-s", script]) for script in proxyScripts]
+        [command.extend(["-s", script]) for script in proxyScripts]
 
-    proxyProcess = subprocess.Popen(args)
+    proxyProcess = subprocess.Popen(command)
 
 def str2list(str, delim=';'):
     strs = (u'' + str).split(delim) # convert to Unicode and split
@@ -592,6 +594,7 @@ def main():
     parser.add_argument('-a', '--automation', action='store_true', help="creates an automation build")
     parser.add_argument('-p', '--proxy', action='store_true', help="builds the app to proxy through this host")
     parser.add_argument('-s', '--proxy_scripts', nargs='+', help='Provide paths to proxy add-on scripts', required=False)
+    parser.add_argument('-w', '--web', action='store_true', help='Uses mitmweb to provide a browser-based network monitor', required=False)
     parser.add_argument('--proxy_exclude', nargs='+', help='Provide regex-formatted domains that will be exclude by proxy filter', required=False)
     parser.add_argument('--check_ip', action='store_true', help="Checks for at least one, reachable, Roku IP address")
     parser.add_argument('--select_roku_ips', action='store_true', help="Filters list of IPs and returns all valid, reachable, roku IPs in list.")
@@ -624,10 +627,11 @@ def main():
     useProxy = args.proxy
     proxyScripts = args.proxy_scripts
     proxyExclude = args.proxy_exclude
+    useWebUi = args.web
 
     # start mitmproxy
     if useProxy:
-        startProxy(proxyScripts, proxyExclude)
+        startProxy(proxyScripts, proxyExclude, useWebUi)
 
     # if we aren't using proxy but user specified scripts to load
     elif proxyScripts is not None:
@@ -637,6 +641,11 @@ def main():
     elif proxyExclude is not None:
         print("'--proxy_exclude' argument can only be used if '--proxy' argument is also specified")
         exit(1)
+
+    elif useWebUi is not None:
+        print("'--web_ui' argument can only be used if '--proxy' argument is also specified")
+        exit(1)
+
 
     if args.zip_file: # zip file provided
         zipFile = args.zip_file[0]

@@ -599,15 +599,15 @@ def main():
     parser.add_argument('-a', '--automation', action='store_true', help="creates an automation build")
     parser.add_argument('-p', '--proxy', action='store_true', help="builds the app to proxy through this host")
 
-    parser.add_argument('-s', '--proxy-scripts', nargs='+', required=False, help='Provide paths to proxy add-on scripts')
-    parser.add_argument('--proxy_scripts', nargs='+', required=False, help=argparse.SUPPRESS)
+    parser.add_argument('-s', '--proxy-scripts', nargs='+', help='Provide paths to proxy add-on scripts')
+    parser.add_argument('--proxy_scripts', nargs='+', help=argparse.SUPPRESS)
 
-    parser.add_argument('-w', '--web', action='store_true', required=False, help='Uses mitmweb to provide a browser-based network monitor')
+    parser.add_argument('-w', '--web', action='store_true', help='Uses mitmweb to provide a browser-based network monitor')
 
     parser.add_argument('--proxy-exclude', nargs='+', help='Provide regex-formatted domains that will be exclude by proxy filter')
     parser.add_argument('--proxy_exclude', nargs='+', help=argparse.SUPPRESS)
 
-    parser.add_argument('--check-ip', action='store_true', required=False, help="Checks for at least one, reachable, Roku IP address")
+    parser.add_argument('--check-ip', action='store_true', help="Checks for at least one, reachable, Roku IP address")
     parser.add_argument('--check_ip', action='store_true', help=argparse.SUPPRESS)
 
     parser.add_argument('--select-roku-ips', action='store_true', help="Filters list of IPs and returns all valid, reachable, roku IPs in list.")

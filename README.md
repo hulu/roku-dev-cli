@@ -132,7 +132,23 @@ At this point the application should be running through your proxy.
 
 TODO: document use of mitmdump scripts
 
-# Publishing to PyPi
+# Developing
+
+## Running from source
+
+To switch a local source version:
+
+```shell
+pip install -e /path/to/your/local/repos/roku-dev-cli
+```
+
+To switch to the published version:
+
+```shell
+pip uninstall roku-dev-cli && pip install roku-dev-cli
+```
+
+## Publishing to PyPi
 
 1.  If necessary, create a personal account at pypi.org and ask to be added as a
     maintainer of https://pypi.org/project/roku-dev-cli/.

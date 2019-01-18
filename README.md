@@ -48,7 +48,7 @@ If you already have a zip file you want to load, you can use the zip_file flag
 instead of zipping the current directory:
 
 ```shell
-roku --zip_file <ZIP_FILE_PATH> <IP_ADDRESS>
+roku --zip-file <ZIP_FILE_PATH> <IP_ADDRESS>
 ```
 
 This will install the zip file and start logging the application output.

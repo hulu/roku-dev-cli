@@ -136,10 +136,10 @@ TODO: document use of mitmdump scripts
 
 ## Running from source
 
-To switch a local source version:
+To switch to a local source version:
 
 ```shell
-pip install -e /path/to/your/local/repos/roku-dev-cli
+pip install -e ~/roku-dev-cli
 ```
 
 To switch to the published version:

@@ -167,7 +167,13 @@ pip uninstall roku-dev-cli && pip install roku-dev-cli
 
 3.  Merge your pull request, including updating `version.py`.
 
-4.  Publish to the default public pypi repo, you will be prompted to enter your
+4.  If necessary, install `twine`:
+
+    ```shell
+    pip3 install twine
+    ```
+
+5.  Publish to the default public pypi repo, you will be prompted to enter your
     pypi.org password:
 
     ```shell

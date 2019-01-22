@@ -48,7 +48,7 @@ If you already have a zip file you want to load, you can use the zip_file flag
 instead of zipping the current directory:
 
 ```shell
-roku --zip_file <ZIP_FILE_PATH> <IP_ADDRESS>
+roku --zip-file <ZIP_FILE_PATH> <IP_ADDRESS>
 ```
 
 This will install the zip file and start logging the application output.
@@ -132,7 +132,23 @@ At this point the application should be running through your proxy.
 
 TODO: document use of mitmdump scripts
 
-# Publishing to PyPi
+# Developing
+
+## Running from source
+
+To switch to a local source version:
+
+```shell
+pip install -e /path/to/your/local/repos/roku-dev-cli
+```
+
+To switch to the published version:
+
+```shell
+pip uninstall roku-dev-cli && pip install roku-dev-cli
+```
+
+## Publishing to PyPi
 
 1.  If necessary, create a personal account at pypi.org and ask to be added as a
     maintainer of https://pypi.org/project/roku-dev-cli/.
@@ -151,7 +167,13 @@ TODO: document use of mitmdump scripts
 
 3.  Merge your pull request, including updating `version.py`.
 
-4.  Publish to the default public pypi repo, you will be prompted to enter your
+4.  If necessary, install `twine`:
+
+    ```shell
+    pip3 install twine
+    ```
+
+5.  Publish to the default public pypi repo, you will be prompted to enter your
     pypi.org password:
 
     ```shell

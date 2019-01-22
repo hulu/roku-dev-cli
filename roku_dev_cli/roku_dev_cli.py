@@ -129,13 +129,13 @@ class ConsoleListener(threading.Thread):
                             if self.timestamp:
                                 timestamp = datetime.datetime.now().strftime('%h %d, %Y %I:%M:%S%p')
                                 line = bcolors.OKBLUE + "[" + timestamp + "] " + bcolors.ENDC + line
-                            
+
                             # add red to highlight debugger output
                             if line.strip() in debuggerHighlights:
                                 print(bcolors.FAIL + line + bcolors.ENDC)
                             else:
                                 print(line)
-                    
+
         except EOFError as e:
             print(e)
             print(bcolors.FAIL + "telnet timed out on port %i" % self.port + bcolors.ENDC)
@@ -589,21 +589,37 @@ def main():
     parser.add_argument('-t', action='store_true', help="display timestamp in front of each line")
     parser.add_argument('-n', action='store_true', help="track node usage over time")
     parser.add_argument('-i', '--inheritance', action='store_true', help="analyze file inheritance")
-    parser.add_argument('-z', '--zip_file', nargs=1, type=str, help="zip file to load onto the Roku")
-    parser.add_argument('--save_only', action='store_true', help="just creates the xml but doesn't deploy")
+
+    parser.add_argument('-z', '--zip-file', nargs=1, type=str, help="zip file to load onto the Roku") # hyphen-spelling shown in help
+    parser.add_argument('--zip_file', nargs=1, type=str, help=argparse.SUPPRESS) # underscore_spelling supported but not shown in help
+
+    parser.add_argument('--save-only', action='store_true', help="just creates the xml but doesn't deploy")
+    parser.add_argument('--save_only', action='store_true', help=argparse.SUPPRESS)
+
     parser.add_argument('-a', '--automation', action='store_true', help="creates an automation build")
     parser.add_argument('-p', '--proxy', action='store_true', help="builds the app to proxy through this host")
-    parser.add_argument('-s', '--proxy_scripts', nargs='+', help='Provide paths to proxy add-on scripts', required=False)
-    parser.add_argument('-w', '--web', action='store_true', help='Uses mitmweb to provide a browser-based network monitor', required=False)
-    parser.add_argument('--proxy_exclude', nargs='+', help='Provide regex-formatted domains that will be exclude by proxy filter', required=False)
-    parser.add_argument('--check_ip', action='store_true', help="Checks for at least one, reachable, Roku IP address")
-    parser.add_argument('--select_roku_ips', action='store_true', help="Filters list of IPs and returns all valid, reachable, roku IPs in list.")
+
+    parser.add_argument('-s', '--proxy-scripts', nargs='+', help='Provide paths to proxy add-on scripts')
+    parser.add_argument('--proxy_scripts', nargs='+', help=argparse.SUPPRESS)
+
+    parser.add_argument('-w', '--web', action='store_true', help='Uses mitmweb to provide a browser-based network monitor')
+
+    parser.add_argument('--proxy-exclude', nargs='+', help='Provide regex-formatted domains that will be exclude by proxy filter')
+    parser.add_argument('--proxy_exclude', nargs='+', help=argparse.SUPPRESS)
+
+    parser.add_argument('--check-ip', action='store_true', help="Checks for at least one, reachable, Roku IP address")
+    parser.add_argument('--check_ip', action='store_true', help=argparse.SUPPRESS)
+
+    parser.add_argument('--select-roku-ips', action='store_true', help="Filters list of IPs and returns all valid, reachable, roku IPs in list.")
+    parser.add_argument('--select_roku_ips', action='store_true', help=argparse.SUPPRESS)
+
     parser.add_argument(
         '-u',
         '--user',
         default=os.environ.get('ROKU_DEV_USER'),
         help='Roku device username:password, defaults to $ROKU_DEV_USER'
     )
+
     parser.add_argument(
         'ipUnicodes',
         type=str2list,
@@ -637,7 +653,7 @@ def main():
     elif proxyScripts is not None:
         print("'--proxy_scripts' argument can only be used if '--proxy' argument is also specified")
         exit(1)
-    
+
     elif proxyExclude is not None:
         print("'--proxy_exclude' argument can only be used if '--proxy' argument is also specified")
         exit(1)

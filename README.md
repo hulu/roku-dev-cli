@@ -167,10 +167,10 @@ pip uninstall roku-dev-cli && pip install roku-dev-cli
 
 3.  Merge your pull request, including updating `version.py`.
 
-4.  If necessary, install `twine`:
+4.  If necessary, install `twine` and `wheel`:
 
     ```shell
-    pip3 install twine
+    pip3 install twine wheel
     ```
 
 5.  Publish to the default public pypi repo, you will be prompted to enter your

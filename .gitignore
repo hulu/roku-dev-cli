@@ -2,3 +2,4 @@ build/
 dist/
 roku_dev_cli.egg-info/
 *.pyc
+.vscode

@@ -64,7 +64,16 @@ def killChildren():
         print("killing proxy process")
         proxyProcess.kill()
 
+# prints report paths at the end of the program
+reportMessages = []
+def reportReminder():
+    print("\n")
+    for msg in reportMessages:
+        print(msg)
+    print("\n")
+
 atexit.register(killChildren)
+atexit.register(reportReminder)
 
 def deployZip(zipPath, ipAddress, user):
     response = requests.get("http://%s" % ipAddress)
@@ -95,14 +104,201 @@ def deployZip(zipPath, ipAddress, user):
     else:
         raise NotImplementedError('script only supports firmware 5+')
 
+class RendezvousStart():
+    def __init__(self, index, filePath, lineNumber):
+        self.index = index
+        self.filePath = filePath
+        self.lineNumber = lineNumber
+
+class RendezvousEnd():
+    def __init__(self, index, duration):
+        self.index = index
+        self.duration = duration
+
+class RendezvousReporter():
+    def __init__(self):
+        self.initialized = False
+        self.indexPattern = re.compile('Rendezvous\[([0-9]+)\]')
+        self.fileLinePattern = re.compile(r"(\w+:/.*)\(([0-9]+)\)")
+        self.completedPattern = re.compile(r"completed in ([0-9]+\.[0-9]+) s")
+        self.rendezvousData = {}
+
+    def updateReport(self):
+        rByPathAndLine = {}
+        fileLineSections = {}
+        adjacentRange = 1 # search one line above and below for rendezvous
+
+        with open(self.reportPath, 'w') as fd:
+            for rIndex,data in self.rendezvousData.items():
+                if data["end"]: # only process rendezvous data with end
+                    # calculate the most frequent rendezvous and durations
+                    start = data["start"]
+                    key = "%s(%i)" % (start.filePath, start.lineNumber)
+                    if key not in rByPathAndLine:
+                        rByPathAndLine[key] = {
+                            "count" : 0,
+                            "totalTime" : 0,
+                            "longestDuration" : 0
+                        }
+                    rByPathAndLine[key]["count"] += 1
+                    rByPathAndLine[key]["totalTime"] += data["end"].duration
+                    rByPathAndLine[key]["longestDuration"] = max(rByPathAndLine[key]["longestDuration"], data["end"].duration)
+
+                    # make an array of lines and mark the line with rendezvous as True
+                    filePath = start.filePath
+                    if filePath not in fileLineSections:
+                        fileLineSections[filePath] = {
+                            "rendezvousLines" : []
+                        }
+                    lineNumber = start.lineNumber
+                    rendezvousLines = fileLineSections[filePath]["rendezvousLines"]
+                    while lineNumber > len(rendezvousLines): # make sure it's big enough
+                        rendezvousLines.extend([False] * 100)
+                    rendezvousLines[lineNumber] = True
+
+            fd.write("=== Rendezvous by Frequency ===\n")
+            for pathAndLine,stats in sorted(rByPathAndLine.items(), key=lambda kv: kv[1]["count"], reverse=True):
+                averageDuration = stats["totalTime"] / stats["count"]
+                fd.write("%i - %s (avg. duration: %.3fs)\n" % (stats["count"], pathAndLine, averageDuration))
+
+            fd.write("\n")
+
+            fd.write("=== Rendezvous by Longest Single Duration ===\n")
+            for pathAndLine,stats in sorted(rByPathAndLine.items(), key=lambda kv: kv[1]["longestDuration"], reverse=True):
+                fd.write("%2.3fs - %s\n" % (stats["longestDuration"], pathAndLine))
+
+            fd.write("\n")
+
+            fd.write("=== Adjacent Rendezvous (opportunity to use `queueFields`?) ===\n")
+
+            for filePath,stats in fileLineSections.items():
+                rendezvousLines = stats["rendezvousLines"]
+
+                adjacentLines = []
+                for lineNumber in range(0, len(rendezvousLines)):
+                    if rendezvousLines[lineNumber]: # this line has a rendezvous, search adjacent lines
+                        for adjacentLineNumber in range(lineNumber-adjacentRange, lineNumber+adjacentRange+1):
+                            if adjacentLineNumber > -1 and adjacentLineNumber < len(rendezvousLines) and lineNumber != adjacentLineNumber:
+                                if rendezvousLines[adjacentLineNumber]:
+                                    adjacentLines.append(lineNumber)
+                                    break
+
+                # hyphenate ranges
+                ranges = self.hyphenateRanges(adjacentLines, adjacentRange)  
+
+                if len(ranges) > 0:
+                    fd.write("%s - lines adjacent to other rendezvous: %s\n" % (filePath, ", ".join(ranges)))
+
+    # takes a list of int-formatted line numbers and groups them into hyphenated ranges
+    def hyphenateRanges(self, adjacentLines, adjacentRange):
+        ranges = []
+        for adjacentLine in adjacentLines:
+            if len(ranges) == 0:
+                ranges.append("%s-%s" % (adjacentLine, adjacentLine))
+            else:
+                lastRange = ranges[-1]
+                firstLineNumber, lastLineNumber = lastRange.split("-") # get last number in last range
+                if adjacentLine - int(lastLineNumber) < adjacentRange+1: # tack on to existing range
+                    ranges[-1] = "%s-%s" % (firstLineNumber, adjacentLine)
+                else: # start a new range
+                    ranges.append("%s-%s" % (adjacentLine, adjacentLine))
+        return ranges
+
+    # setup a report file for writing
+    def initialize(self):
+        with tempfile.NamedTemporaryFile(prefix='rendezvous_report_', suffix='.txt', delete=False) as fd:
+            self.reportPath = fd.name
+
+        with open(self.reportPath, 'w') as fd:
+            fd.write("no rendezvous logs processed\n") # placeholder until logs actually written
+
+        msg = bcolors.OKBLUE + "writing rendezvous report: %s" % self.reportPath + bcolors.ENDC
+        print(msg)
+        reportMessages.append(msg)
+
+    # process a given line of telnet output (ignores non-rendezvous-related lines)
+    def processLine(self, line):
+        if not self.initialized: # doing this lazily so it doesn't show up in testing
+            self.initialize()
+            self.initialized = True
+        try:
+            lineInfo = self.parseLine(line)
+        except ValueError as e:
+            print(bcolors.FAIL + "reporter unable to parse line: %s" % line + bcolors.ENDC)
+
+        if isinstance(lineInfo, RendezvousStart):
+            self.rendezvousData[lineInfo.index] = {
+                "start" : lineInfo,
+                "end" : None
+            }
+        elif isinstance(lineInfo, RendezvousEnd):
+            if lineInfo.index in self.rendezvousData:
+                self.rendezvousData[lineInfo.index]["end"] = lineInfo
+                self.updateReport()
+            else:
+                print(bcolors.FAIL + "no rendezvous start for reported end: %i" % lineInfo.index + line + bcolors.ENDC)
+        
+    def parseLine(self, line):
+        if "sg.node.BLOCK" in line:
+            return RendezvousStart(
+                int(self.parseRendezvousIndex(line)), 
+                self.parseFilePath(line),
+                int(self.parseLineNumber(line))
+            )
+        elif "sg.node.UNBLOCK" in line:
+            return RendezvousEnd(
+                int(self.parseRendezvousIndex(line)), 
+                float(self.parseRendezvousDuration(line))
+            )
+        else:
+            return None
+
+    # find the index of the rendezvous in the log line
+    def parseRendezvousIndex(self, line):
+        matches = self.indexPattern.search(line).groups(0)
+        if len(matches) == 1:
+            return matches[0]
+        else:
+            raise ValueError("unable to parse index")
+
+    # find the file path in the line
+    def parseFilePath(self, line):
+        matches = self.fileLinePattern.search(line)
+        if not matches or len(matches.groups()) != 2:
+            raise ValueError("unable to parse file path")
+        else:
+            groups = matches.groups()
+            return groups[0]
+
+    def parseLineNumber(self, line):
+        matches = self.fileLinePattern.search(line)
+        if not matches or len(matches.groups()) != 2:
+            raise ValueError("unable to parse file number")
+        else:
+            groups = matches.groups()
+            return groups[1]        
+
+    def parseRendezvousDuration(self, line):
+        matches = self.completedPattern.search(line)
+        if matches:
+            groups = matches.groups()
+            return groups[0]
+        elif line.strip().endswith("completed"):
+            return "0.000" # completed in under 1 millisecond
+        else:
+            raise ValueError("unable to parse duration")
+
 class ConsoleListener(threading.Thread):
-    def __init__(self, ip, timestamp):
+    def __init__(self, ip, timestamp, report_rendezvous):
         super(ConsoleListener, self).__init__()
 
         self.ip = ip
         self.port = 8085
         self.daemon = True
         self.timestamp = timestamp # show a timestamp before log output
+        self.reporters = []
+        if report_rendezvous:
+            self.reporters.append(RendezvousReporter())
 
     def run(self):
         debuggerHighlights = set([
@@ -126,6 +322,9 @@ class ConsoleListener(threading.Thread):
                         text = text[compileIndex:]
                     for line in text.split('\n'):
                         if line:
+                            for reporter in self.reporters:
+                                reporter.processLine(line)
+
                             if self.timestamp:
                                 timestamp = datetime.datetime.now().strftime('%h %d, %Y %I:%M:%S%p')
                                 line = bcolors.OKBLUE + "[" + timestamp + "] " + bcolors.ENDC + line
@@ -277,7 +476,10 @@ class PollingListener(threading.Thread):
             basePyPath = os.path.dirname(os.path.realpath(__file__))
             htmlFile = os.path.join(basePyPath, "reports", "index.html")
             shutil.copy2(htmlFile, os.path.join(reportDir, "index.html"))
-            print("creating report file: %s" % os.path.join(reportDir, "index.html"))
+
+            msg = bcolors.OKBLUE + "writing node report: %s" % os.path.join(reportDir, "index.html") + bcolors.ENDC
+            print(msg)
+            reportMessages.append(msg)
 
         return reportDir
 
@@ -588,6 +790,7 @@ def main():
     parser.add_argument('-v', '--version', action='version', version='roku-dev-cli {}'.format(__version__))
     parser.add_argument('-t', action='store_true', help="display timestamp in front of each line")
     parser.add_argument('-n', action='store_true', help="track node usage over time")
+    parser.add_argument('--report-rendezvous', action='store_true', help='reports telnet rendezvous events to file')
     parser.add_argument('-i', '--inheritance', action='store_true', help="analyze file inheritance")
 
     parser.add_argument('-z', '--zip-file', nargs=1, type=str, help="zip file to load onto the Roku") # hyphen-spelling shown in help
@@ -685,7 +888,7 @@ def main():
         threads = []
 
         # setup main thread for listening to console output
-        threads.append(ConsoleListener(ip, args.t))
+        threads.append(ConsoleListener(ip, args.t, args.report_rendezvous))
 
         # track node usage over time
         if args.n:

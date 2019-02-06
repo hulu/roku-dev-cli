@@ -53,9 +53,30 @@ roku --zip-file <ZIP_FILE_PATH> <IP_ADDRESS>
 
 This will install the zip file and start logging the application output.
 
-# Usage: Analysis
+# Usage: Channel Analysis
 
-TODO: document analysis tools and graphing
+There are two reporting tools available.  
+
+One tool provides a graph of nodes and texture memory over time, which is written to a file and viewable in a browser.  
+
+```shell
+roku -n <IP_ADDRESS>
+```
+
+The other parses any logrendezvous output from the telnet port and writes it to a file.  This will create three lists:
+* rendezvous by frequency (highest to lowest)
+* rendezvous by longest duration (highest to lowest)
+* rendezvous neighboring other rendezvous lines, which may show an opportunity to use _queueFields_ to mitigate multiple rendezvous
+
+```shell
+roku --report-rendezvous <IP_ADDRESS>
+```
+
+Before running this tool, make sure the device is printing out rendezvous logs.  You can do this by telnetting into port 8080 on the device and running the following command:
+
+```shell
+> logrendezvous on
+```
 
 # Usage: Network Proxying
 
@@ -146,6 +167,14 @@ To switch to the published version:
 
 ```shell
 pip uninstall roku-dev-cli && pip install roku-dev-cli
+```
+
+## Testing
+
+Where relevant, please add unit tests and make sure they are passing before submitting a pull request.  
+
+```shell
+pytest
 ```
 
 ## Publishing to PyPi

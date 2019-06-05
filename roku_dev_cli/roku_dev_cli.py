@@ -152,7 +152,7 @@ class RendezvousReporter():
                         }
                     lineNumber = start.lineNumber
                     rendezvousLines = fileLineSections[filePath]["rendezvousLines"]
-                    while lineNumber > len(rendezvousLines): # make sure it's big enough
+                    while lineNumber >= len(rendezvousLines): # make sure it's big enough
                         rendezvousLines.extend([False] * 100)
                     rendezvousLines[lineNumber] = True
 

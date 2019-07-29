@@ -630,8 +630,9 @@ def createZipFromCwd(proxy, additionalPaths, package_all):
             def addDirectory(path):
                 for root, dirs, files in os.walk(path):
                     for f in files:
-                        path = '%s/%s' % (root, f)
-                        addFile(path)
+                        if not f.startswith("."):
+                            path = '%s/%s' % (root, f)
+                            addFile(path)
 
             if package_all:
                 # walk dir, add stuff

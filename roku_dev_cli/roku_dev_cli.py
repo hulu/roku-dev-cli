@@ -712,84 +712,6 @@ def startProxy(proxyScripts, proxyExclude, useWebUi):
 
     proxyProcess = subprocess.Popen(command)
 
-def str2list(str, delim=';'):
-    strs = (u'' + str).split(delim) # convert to Unicode and split
-    strs = map((lambda s: s.strip()), strs) # strip each element
-    strs = filter((lambda s: s), strs) # reject empty elements
-    return list(strs) # resolve iterable to list
-
-def validIp(ipUnicode, verbose=True):
-    """Create valid IPAddress object or None
-    :param str ipUnicode: An IP address as a Unicode string.
-    :param bool verbose: Set to false to suppress log output.
-    :return: An IPAddress object if `ipUnicode` is well-formed; otherwise None.
-    :rtype: IPAddress or None
-    """
-    ip = None
-    try:
-        ip = ipaddress.ip_address(ipUnicode)
-    except ValueError as e:
-        log_info(e, verbose=verbose)
-    return ip
-
-def reachableIp(ipUnicode, verbose=True):
-    """Create reachable IPAddress object or None
-    :param str ipUnicode: An IP address as a Unicode string.
-    :param bool verbose: Set to false to suppress log output.
-    :return: An IPAddress object if `ipUnicode` responds successfully to
-        ping; otherwise None.
-    :rtype: IPAddress or None
-    """
-    ip = validIp(ipUnicode, verbose=verbose)
-    if ip and os.system("ping -q -n -c 1 -W 500 {} &> /dev/null".format(ip)):
-        log_info('{} is not reachable'.format(ipUnicode), verbose=verbose)
-        ip = None
-    return ip
-
-def rokuIp(ipUnicode, verbose=True):
-    """Create reachable, Roku IPAddress object or None
-    :param str ipUnicode: An IP address as a Unicode string.
-    :param bool verbose: Set to false to suppress log output.
-    :return: An IPAddress object if `ipUnicode` responds successfully to
-        a Roku device-info query; otherwise None.
-    :rtype: IPAddress or None
-    """
-    ip = reachableIp(ipUnicode, verbose=verbose)
-    if ip and os.system('curl -s --connect-timeout .5 -o /dev/null "http://{}:8060/query/device-info"'.format(ip)):
-        log_info('{} is not a Roku device'.format(ipUnicode), verbose=verbose)
-        ip = None
-    return ip
-
-def findRokuIp(ipUnicodes, verbose=True):
-    """Find first reachable, Roku IP address as an IPAddress object or None
-    :param list[str] ipUnicodes: A list of IP addresses as Unicode strings.
-    :param bool verbose: Set to false to suppress log output.
-    :return: An IPAddress object for the first address in `ipUnicodes` that
-        responds successfully to a Roku device-info query; otherwise None.
-    :rtype: IPAddress or None
-    """
-    log_info('Finding Roku devices in {}'.format(ipUnicodes))
-    ip = next((ipUnicode for ipUnicode in ipUnicodes if rokuIp(ipUnicode, verbose=verbose)), None)
-    if not ip:
-        log_fail('No reachable Roku device found in {}'.format(ipUnicodes), verbose=verbose)
-        exit(1)
-    log_ok('{} is a Roku device'.format(ip), verbose=verbose)
-    return ip
-
-def selectRokuIps(ipUnicodes, verbose=True):
-    """Create list of reachable, Roku IPAddress objects.
-    :param list[str] ipUnicodes: A list of IP addresses as Unicode strings.
-    :param bool verbose: Set to false to suppress log output.
-    :return: A list of IPAddress objects for addresses in `ipUnicodes` that
-        respond successfully to a Roku device-info query. May be empty.
-    :rtype: list[IPAddress]
-    """
-    log_info('Finding Roku devices in {}'.format(ipUnicodes), verbose=verbose)
-    rokuIpQuiet = lambda ipUnicode: rokuIp(ipUnicode, verbose=False)
-    ips = filter(rokuIpQuiet, ipUnicodes)
-    log_ok('Found the following Roku devices {}'.format(ips), verbose=verbose)
-    return ips
-
 def main():
     parser = argparse.ArgumentParser(description='Uploads builds to the device and telnets into the machine for logging')
 
@@ -816,12 +738,6 @@ def main():
     parser.add_argument('--proxy-exclude', nargs='+', help='Provide regex-formatted domains that will be exclude by proxy filter')
     parser.add_argument('--proxy_exclude', nargs='+', help=argparse.SUPPRESS)
 
-    parser.add_argument('--check-ip', action='store_true', help="Checks for at least one, reachable, Roku IP address")
-    parser.add_argument('--check_ip', action='store_true', help=argparse.SUPPRESS)
-
-    parser.add_argument('--select-roku-ips', action='store_true', help="Filters list of IPs and returns all valid, reachable, roku IPs in list.")
-    parser.add_argument('--select_roku_ips', action='store_true', help=argparse.SUPPRESS)
-
     parser.add_argument('--package_all', action='store_true', help="Add everything under the folder into the target package. If set, automation flag will be ignored.")
 
     parser.add_argument(
@@ -832,24 +748,16 @@ def main():
     )
 
     parser.add_argument(
-        'ipUnicodes',
-        type=str2list,
+        'ipUnicode',
         nargs='?',
         default=os.environ.get('ROKU_DEV_TARGET', ''),
-        metavar='ip_address(es)',
-        help='semicolon-delimited list of Roku device IP addresses, defaults to $ROKU_DEV_TARGET'
+        metavar='ip_address',
+        help='Roku device IP address, defaults to $ROKU_DEV_TARGET'
     )
 
     args = parser.parse_args()
 
-    if args.select_roku_ips:
-        selectRokuIps(args.ipUnicodes, verbose=True)
-        exit(0)
-
-    ip = None if args.save_only else str(findRokuIp(args.ipUnicodes, verbose=True))
-
-    if args.check_ip:
-        exit(0)
+    ip = args.ipUnicode
 
     useProxy = args.proxy
     proxyScripts = args.proxy_scripts
@@ -891,6 +799,13 @@ def main():
         zipFile = createZipFromCwd(useProxy, additionalDirs, args.package_all)
 
     if ip:
+        # make sure valid IP format
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError as e:
+            print("invalid IP address provided: %s" % ip)
+            exit(1)
+
         deployZip(zipFile, ip, args.user)
 
         threads = []

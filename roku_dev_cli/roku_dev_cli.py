@@ -184,7 +184,7 @@ class RendezvousReporter():
                                     break
 
                 # hyphenate ranges
-                ranges = self.hyphenateRanges(adjacentLines, adjacentRange)  
+                ranges = self.hyphenateRanges(adjacentLines, adjacentRange)
 
                 if len(ranges) > 0:
                     fd.write("%s - lines adjacent to other rendezvous: %s\n" % (filePath, ", ".join(ranges)))
@@ -237,17 +237,17 @@ class RendezvousReporter():
                 self.updateReport()
             else:
                 print(bcolors.FAIL + "no rendezvous start for reported end: %i" % lineInfo.index + line + bcolors.ENDC)
-        
+
     def parseLine(self, line):
         if "sg.node.BLOCK" in line:
             return RendezvousStart(
-                int(self.parseRendezvousIndex(line)), 
+                int(self.parseRendezvousIndex(line)),
                 self.parseFilePath(line),
                 int(self.parseLineNumber(line))
             )
         elif "sg.node.UNBLOCK" in line:
             return RendezvousEnd(
-                int(self.parseRendezvousIndex(line)), 
+                int(self.parseRendezvousIndex(line)),
                 float(self.parseRendezvousDuration(line))
             )
         else:
@@ -276,7 +276,7 @@ class RendezvousReporter():
             raise ValueError("unable to parse file number")
         else:
             groups = matches.groups()
-            return groups[1]        
+            return groups[1]
 
     def parseRendezvousDuration(self, line):
         matches = self.completedPattern.search(line)
@@ -652,6 +652,9 @@ def createZipFromCwd(proxy, additionalPaths, package_all):
 
                 # add components
                 addDirectory('components')
+
+                # add locales
+                addDirectory('locale')
 
                 # add additional directories specified
                 for path in additionalPaths:
